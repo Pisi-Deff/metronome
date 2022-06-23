@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Pisinome</title>
+	<meta charset="UTF-8">
+
+	<style>
+		.togglePlay {
+			cursor: pointer;
+			font-size: 32px;
+			line-height: 36px;
+			text-align: center;
+			border: 3px solid #ddd;
+			border-radius: 50%;
+			width: 40px;
+			height: 40px;
+			margin: 0 auto 20px;
+			color: #666;
+			background-color: #f8f8f8;
+			user-select: none;
+		}
+
+		.bpmBar, .volumeBar {
+			display: flex;
+			flex-direction: row;
+			gap: 8px;
+			align-items: center;
+			margin-bottom: 16px;
+		}
+
+		.bpmMod, .volumeBtn {
+			color: #666;
+			cursor: pointer;
+			user-select: none;
+		}
+	</style>
+</head>
+
+<body style="transition: background-color .1s">
+	<div style="width: 150px; margin: 200px auto 0;">
+		<div class="togglePlay">⏸︎</div>
+
+		<div class="bpmBar">
+			<div>
+				<input style="width: 90%;" type="number" name="bpm" min="1" max="600" autocomplete="off" />
+			</div>
+			<div class="bpmMod" data-mod="-10">-10</div>
+			<div class="bpmMod" data-mod="10">+10</div>
+		</div>
+
+		<div class="volumeBar">
+			<span class="volumeBtn">🔊</span>
+			<div>
+				<input style="width: 100%;" type="range" name="volume" min="0" max="1" step="0.01" autocomplete="off" />
+			</div>
+		</div>
+	</div>
+
+	<audio style="display: none;" src="tick.wav" preload="auto" />
+
+	<script>
+		const body = document.querySelector('body');
+
+		const playPause = document.querySelector('.togglePlay');
+		const input = document.querySelector('input[name=bpm]');
+		const bpmMod = document.querySelectorAll('.bpmMod');
+		const volumeBtn = document.querySelector('.volumeBtn');
+		const volume = document.querySelector('input[name=volume]');
+
+		const tick = document.querySelector('audio');
+
+		let bg = 'white';
+		let bpm = 60;
+		let msPerBeat = 1000;
+		let counter = 0;
+		let tickCounter = 0;
+		let playing = true;
+
+		function setBPM(newBPM) {
+			if (newBPM > 600) {
+				input.value = 600;
+				newBPM = 600;
+			} else if (newBPM < 1) {
+				input.value = 1;
+				newBPM = 1;
+			}
+
+			input.value = newBPM;
+			msPerBeat = 60000 / newBPM;
+			localStorage.setItem('bpm', newBPM);
+		}
+
+		function setVolume(newVolume) {
+			if (typeof newVolume === 'string') {
+				newVolume = parseFloat(newVolume);
+			}
+
+			tick.volume = newVolume;
+			volume.value = newVolume;
+			localStorage.setItem('volume', newVolume);
+			if (newVolume > 0) {
+				localStorage.setItem('nonMuteVolume', newVolume);
+			}
+			volumeBtn.innerText = newVolume === 0 ? '🔇' : '🔊';
+		}
+
+		const storedBPM = parseInt(localStorage.getItem('bpm'));
+		setBPM(storedBPM === NaN ? 60 : storedBPM);
+
+		const storedVolume = parseFloat(localStorage.getItem('volume'));
+		setVolume(storedVolume === NaN ? 0.3 : storedVolume);
+
+		playPause.addEventListener('click', () => {
+			playing = !playing;
+			playPause.innerText = playing ? '⏸︎' : '⏵';
+		});
+
+		input.addEventListener('input', (event) => setBPM(event.target.value));
+
+		bpmMod.forEach(modBtn => modBtn.addEventListener('click', (event) => {
+			const mod = parseInt(event.target.getAttribute('data-mod'), 10);
+			setBPM(parseInt(input.value, 10) + mod);
+		}));
+
+		volumeBtn.addEventListener('click', () => setVolume(volume.value === '0'
+				? localStorage.getItem('nonMuteVolume')
+				: 0));
+
+		volume.addEventListener('input', (event) => setVolume(event.target.value));
+
+		setInterval(() => {
+			if (!playing) {
+				return;
+			}
+
+			counter += 10;
+			if (counter >= msPerBeat) {
+				tick.play();
+				bg = bg === 'white' ? 'grey' : 'white';
+				body.style.backgroundColor = bg;
+				counter = 0;
+			}
+		}, 10);
+	</script>
+</body>
+
+</html>
